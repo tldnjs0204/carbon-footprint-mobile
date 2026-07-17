@@ -121,7 +121,7 @@ st.caption(f"💡 평균 시속 {avg_speed}km/h 기준, 1회당 약 {estimated_d
 
 # 모바일 세로 모드에서 글자 겹침을 방지하기 위해 1줄씩 깔끔하게 쌓기
 st.metric(label="🔹 편도 1회 이동 시 배출량", value=f"{single_trip_emission_g:,.0f} g CO₂")
-st.metric(label="🔸 이번 여행 총 예상 배출량 (총 {frequency_per_trip}회)", value=f"{total_emission_kg:,.2f} kg CO₂")
+st.metric(label=f"🔸 이번 여행 총 예상 배출량 (총 {frequency_per_trip}회)", value=f"{total_emission_kg:,.2f} kg CO₂")
 st.metric(
     label="🌲 상쇄를 위해 필요한 소나무", 
     value=f"약 {trees_needed:,.2f} 그루",
@@ -135,7 +135,7 @@ st.markdown("---")
 # 6. 연간 허용량 대비 소진율 원형 그래프 (참고 사진 팔레트)
 # -----------------------------------------------------------------------------
 st.subheader("🎯 연간 허용 탄소배출량 중 이번 여행 사용 비율")
-st.markdown(f"**녹색전환연구소 2030년 감축 목표 기준** 1인당 연간 허용 배출량은 **5.9톤 (5,900 kg CO₂)** 입니다.")
+st.markdown("**녹색전환연구소 2030년 감축 목표 기준** 1인당 연간 허용 배출량은 **5.9톤 (5,900 kg CO₂)** 입니다.")
 
 remaining_budget_kg = max(0.0, ANNUAL_CARBON_BUDGET_KG - total_emission_kg)
 pie_data = pd.DataFrame({
@@ -242,9 +242,8 @@ train_total_kg = (train_row["1km당 CO2 배출량(g)"] * estimated_distance_km *
 reduction_kg = total_emission_kg - train_total_kg
 
 if reduction_kg > 0:
-    st.success(f"🎉 동일 거리를 **고속열차(KTX/SRT)**로 전환할 경우, **{reduction_kg:,.2f} kg CO₂**를 줄일 수 있습니다!
-
-(연간 탄소 예산의 **{(reduction_kg / ANNUAL_CARBON_BUDGET_KG)*100:.2f}%** 절약 효과)")
+    # 줄바꿈 문법(\n\n)을 정확히 사용하여 SyntaxError를 해결한 부분입니다.
+    st.success(f"🎉 동일 거리를 **고속열차(KTX/SRT)**로 전환할 경우, **{reduction_kg:,.2f} kg CO₂**를 줄일 수 있습니다!\n\n(연간 탄소 예산의 **{(reduction_kg / ANNUAL_CARBON_BUDGET_KG)*100:.2f}%** 절약 효과)")
 else:
     st.info("👍 이미 아주 친환경적인 대중교통 수단을 이용해 여행하고 계십니다! 훌륭합니다!")
 
@@ -283,7 +282,7 @@ with st.expander("📋 상세 데이터 표 보기 및 참고문헌"):
     display_df = df[["교통수단", "카테고리", "평균시속(km/h)", "1km당 CO2 배출량(g)", "1시간당 배출량(g)"]].copy()
     display_df["1시간당 배출량(g)"] = display_df["1시간당 배출량(g)"].round(1)
     st.dataframe(display_df.style.background_gradient(subset=["1km당 CO2 배출량(g)"], cmap="Greens"), use_container_width=True)
-    st.markdown("- **연간 탄소 허용량 출처**: 녹색전환연구소 기준 (2030년 40% 감축 목표) 1인당 연간 온실가스 배출 예산 **5.9톤 (5,900 kg CO₂e)** 적용
-- **교통수단 배출량 출처**: 유럽환경청(EEA) 및 한국기후환경 네트워크 추정치 기반 예시 데이터")
+    # 줄바꿈 문법(\n)을 정확히 사용하여 SyntaxError를 해결한 부분입니다.
+    st.markdown("- **연간 탄소 허용량 출처**: 녹색전환연구소 기준 (2030년 40% 감축 목표) 1인당 연간 온실가스 배출 예산 **5.9톤 (5,900 kg CO₂e)** 적용\n- **교통수단 배출량 출처**: 유럽환경청(EEA) 및 한국기후환경 네트워크 추정치 기반 예시 데이터")
 
 st.caption("📱 모바일 최적화 대시보드 | 탄소여권 프로젝트")
