@@ -51,7 +51,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 제목 및 소개
-st.title("🌍 모바일 탄소발자국 대시보드")
+st.title("🌍여행 탄소발자국 대시보드")
 st.markdown("**📱 이번 여행의 이동 수단과 시간을 선택하여 탄소 배출량과 1.5도씨 라이프스타일 예산을 계산해보세요!**")
 st.markdown("---")
 
@@ -97,7 +97,7 @@ selected_transport = st.selectbox(
 )
 
 time_hours = st.slider("2️⃣ 1회 이동 시간 (편도 기준, 시간):", 0.5, 6.0, 2.5, step=0.5)
-frequency_per_trip = st.slider("3️⃣ 이용 횟수 (편도 탑승 기준):", 1, 10, 2)
+frequency_per_trip = st.slider("3️⃣ 이용 횟수 (편도 탑승 기준):", 1, 5, 2)
 
 # 선택된 교통수단의 데이터 조회 및 계산
 selected_row = df.loc[df["교통수단"] == selected_transport].iloc[0]
