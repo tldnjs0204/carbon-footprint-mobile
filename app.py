@@ -66,14 +66,15 @@ data = {
         "고속열차 (KTX/SRT)", 
         "시내버스", 
         "고속/시외버스", 
+        "전기 승용차 (BEV)",      # <-- 순수 전기차 완벽 추가!
         "하이브리드 승용차", 
         "가솔린 승용차", 
         "디젤 승용차", 
         "국내선 항공기"
     ],
-    "1km당 CO2 배출량(g)": [6, 14, 28, 33, 90, 150, 170, 255],
-    "평균시속(km/h)": [40, 200, 20, 80, 35, 35, 35, 600],
-    "카테고리": ["대중교통", "대중교통", "대중교통", "대중교통", "개인교통", "개인교통", "개인교통", "항공"]
+    "1km당 CO2 배출량(g)": [6, 14, 28, 33, 40, 90, 150, 170, 255],
+    "평균시속(km/h)": [40, 200, 20, 80, 35, 35, 35, 35, 600],
+    "카테고리": ["대중교통", "대중교통", "대중교통", "대중교통", "개인교통", "개인교통", "개인교통", "개인교통", "항공"]
 }
 
 df = pd.DataFrame(data)
@@ -187,7 +188,7 @@ st.progress(min(budget_percentage_total / 100.0, 1.0))
 st.markdown("---")
 
 # -----------------------------------------------------------------------------
-# 7. 8개 교통수단 전체 배출량 비교 (모바일 화면 폭 최적화 막대 그래프)
+# 7. 9개 교통수단 전체 배출량 비교 (모바일 화면 폭 최적화 막대 그래프)
 # -----------------------------------------------------------------------------
 st.subheader(f"💡 동일 시간(편도 {time_hours}시간) 이동 시 CO₂ 배출량 비교")
 st.caption("다른 교통수단을 이용했을 때의 배출량을 한눈에 비교해보세요!")
@@ -208,7 +209,7 @@ fig_bar = px.bar(
     color_discrete_map=pastel_color_map,
     orientation='h',
     text="선택시간당 배출량(g)",
-    height=420
+    height=450
 )
 
 fig_bar.update_traces(
@@ -223,7 +224,7 @@ fig_bar.update_layout(
     yaxis_title="",
     plot_bgcolor="rgba(0,0,0,0)",
     paper_bgcolor="white",
-    margin=dict(l=0, r=30, t=20, b=0),
+    margin=dict(l=0, r=35, t=20, b=0),
     legend=dict(title="분류", orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5)
 )
 
@@ -242,7 +243,6 @@ train_total_kg = (train_row["1km당 CO2 배출량(g)"] * estimated_distance_km *
 reduction_kg = total_emission_kg - train_total_kg
 
 if reduction_kg > 0:
-    # 줄바꿈 문법(\n\n)을 정확히 사용하여 SyntaxError를 해결한 부분입니다.
     st.success(f"🎉 동일 거리를 **고속열차(KTX/SRT)**로 전환할 경우, **{reduction_kg:,.2f} kg CO₂**를 줄일 수 있습니다!\n\n(연간 탄소 예산의 **{(reduction_kg / ANNUAL_CARBON_BUDGET_KG)*100:.2f}%** 절약 효과)")
 else:
     st.info("👍 이미 아주 친환경적인 대중교통 수단을 이용해 여행하고 계십니다! 훌륭합니다!")
@@ -282,7 +282,6 @@ with st.expander("📋 상세 데이터 표 보기 및 참고문헌"):
     display_df = df[["교통수단", "카테고리", "평균시속(km/h)", "1km당 CO2 배출량(g)", "1시간당 배출량(g)"]].copy()
     display_df["1시간당 배출량(g)"] = display_df["1시간당 배출량(g)"].round(1)
     st.dataframe(display_df.style.background_gradient(subset=["1km당 CO2 배출량(g)"], cmap="Greens"), use_container_width=True)
-    # 줄바꿈 문법(\n)을 정확히 사용하여 SyntaxError를 해결한 부분입니다.
     st.markdown("- **연간 탄소 허용량 출처**: 녹색전환연구소 기준 (2030년 40% 감축 목표) 1인당 연간 온실가스 배출 예산 **5.9톤 (5,900 kg CO₂e)** 적용\n- **교통수단 배출량 출처**: 유럽환경청(EEA) 및 한국기후환경 네트워크 추정치 기반 예시 데이터")
 
 st.caption("📱 모바일 최적화 대시보드 | 탄소여권 프로젝트")
