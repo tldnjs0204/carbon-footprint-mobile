@@ -102,7 +102,6 @@ st.markdown("---")
 # PART 1. 장거리 이동 탄소 계산
 # ══════════════════════════════════════════════
 st.markdown('<p class="section-title">🚄 PART 1. 장거리 이동 탄소 계산</p>', unsafe_allow_html=True)
-st.markdown('<p class="note">수첩 p.8-9 장거리 이동 기록면과 함께 사용하세요.</p>', unsafe_allow_html=True)
 
 # 원래 코드와 동일한 전체 선택지
 selected_transport = st.selectbox(
@@ -256,15 +255,6 @@ fig_donut.update_layout(
     )]
 )
 st.plotly_chart(fig_donut, use_container_width=True)
-
-if budget_pct <= 2:
-    msg, color = "🌿 매우 훌륭합니다! 연간 예산의 2% 이내로 여행했습니다.", "#34624C"
-elif budget_pct <= 5:
-    msg, color = "👍 양호한 수준입니다. 이동 수단 선택이 잘 됐네요.", "#52B788"
-elif budget_pct <= 10:
-    msg, color = "⚠️ 연간 예산의 10%를 이번 여행에 사용했습니다. 장거리 이동 수단을 바꾸면 크게 줄일 수 있습니다.", "#E67E22"
-else:
-    msg, color = "🔴 연간 예산의 10% 이상을 사용했습니다. 다음 여행에서는 기차·버스 선택을 고려해보세요.", "#E74C3C"
 
 st.markdown(f"""
 <div style="background:{color}15; border-left:4px solid {color};
