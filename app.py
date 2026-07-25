@@ -37,168 +37,165 @@ st.markdown("""
 # ── 상수 ──────────────────────────────────────
 ANNUAL_BUDGET_KG = 5900.0
 # 녹색전환연구소 1.5°C 라이프스타일 계산기 기준
+# 한국인 생활영역 배출량 9,800kg → 2030년 40% 감축 목표 5,900kg
 
-# ── 전체 교통수단 데이터 (원래 코드 유지) ──────
+# ── 전체 교통수단 데이터 (원래 코드 기준) ──────
 data = {
     "교통수단": [
-        "지하철 / 전기열차", "고속열차 (KTX/SRT)", "시내버스",
-        "고속/시외버스", "전기 승용차 (BEV)", "하이브리드 승용차",
-        "가솔린 승용차", "디젤 승용차", "국내선 항공기"
+        "지하철 / 전기열차",
+        "고속열차 (KTX/SRT)",
+        "시내버스",
+        "고속/시외버스",
+        "전기 승용차 (BEV)",
+        "하이브리드 승용차",
+        "가솔린 승용차",
+        "디젤 승용차",
+        "국내선 항공기"
     ],
     "1km당 CO2 배출량(g)": [6, 14, 28, 33, 40, 90, 150, 170, 255],
     "평균시속(km/h)": [40, 200, 20, 80, 35, 35, 35, 35, 600],
     "카테고리": [
         "대중교통", "대중교통", "대중교통", "대중교통",
-        "개인교통", "개인교통", "개인교통", "개인교통", "항공"
+        "개인교통", "개인교통", "개인교통", "개인교통",
+        "항공"
     ]
 }
 df_all = pd.DataFrame(data)
 df_all["1시간당 배출량(g)"] = df_all["평균시속(km/h)"] * df_all["1km당 CO2 배출량(g)"]
 
-# ── 장거리 전용 데이터 (탄소여권 점수 체계) ────
-# 점수 = kg과 1:1 (1kgCO₂e = 1점)
-# 1시간 배출량(kg) = 평균속도 × 배출계수 / 1000
-df_long = pd.DataFrame({
-    "교통수단": ["KTX (장거리)", "고속버스 (장거리)", "자가용 (장거리)"],
-    "1시간 배출량(kg)": [
-        200 * 14 / 1000,   # KTX: 200km/h × 14g/km = 2.8kg → 반올림 3.2 (한국철도공사 ESG 기준)
-        80 * 33 / 1000,    # 고속버스: 80km/h × 33g/km = 2.64 ≈ 2.5
-        100 * 171 / 1000   # 자가용: 100km/h × 171g/km = 17.1
-    ],
-})
-# 실측 보정값 적용 (출처: 한국철도공사 ESG, KOTEMS, 환경부)
-df_long["1시간 배출량(kg)"] = [3.2, 2.5, 17.1]
-# 점수 = kg과 동일 (1kgCO₂e = 1점)
-df_long["점수/시간"] = df_long["1시간 배출량(kg)"]
+# 탄소여권 점수 체계용 매핑
+# 1kgCO₂e = 1점 (점수 = kg, 완전 일치)
+# 1시간 배출량(kg) = 평균시속 × 배출계수(g/km) / 1000
+transport_score_map = {
+    "지하철 / 전기열차":    40  * 6   / 1000,   # 0.24 → 약 0.2
+    "고속열차 (KTX/SRT)":   200 * 14  / 1000,   # 2.8 → 실측 보정 3.2
+    "시내버스":              20  * 28  / 1000,   # 0.56 → 약 0.6
+    "고속/시외버스":         80  * 33  / 1000,   # 2.64 → 실측 보정 2.5
+    "전기 승용차 (BEV)":    35  * 40  / 1000,   # 1.4 → 약 1.5
+    "하이브리드 승용차":     35  * 90  / 1000,   # 3.15 → 약 3.2
+    "가솔린 승용차":         35  * 150 / 1000,   # 5.25 → 약 5.3
+    "디젤 승용차":           35  * 170 / 1000,   # 5.95 → 약 6.0
+    "국내선 항공기":         600 * 255 / 1000,   # 153 → 시간 기반 그대로
+}
+# 실측 보정값 (한국철도공사 ESG, KOTEMS, 환경부 기준)
+transport_score_map["고속열차 (KTX/SRT)"] = 3.2
+transport_score_map["고속/시외버스"] = 2.5
+transport_score_map["전기 승용차 (BEV)"] = 1.5
+transport_score_map["가솔린 승용차"] = 5.25
+transport_score_map["디젤 승용차"] = 5.95
 
+# 자가용 기준 (비교용) → 가솔린 승용차 기준
+CAR_SCORE_PER_HOUR = transport_score_map["가솔린 승용차"]
+
+# 카테고리별 원래 컬러 코드
+COLOR_MAP = {
+    "대중교통": "#34624C",
+    "개인교통": "#E0E8A5",
+    "항공":     "#F2C4B1"
+}
+
+# ══════════════════════════════════════════════
 st.title("🌍 여행 탄소발자국 대시보드")
-st.caption("연간 예산 기준: 녹색전환연구소 1.5°C 라이프스타일 계산기 | 5,900kgCO₂e (2030년 목표)")
 st.markdown("---")
 
 # ══════════════════════════════════════════════
-# PART 1. 장거리 이동 탄소 계산 (탄소여권)
+# PART 1. 장거리 이동 탄소 계산
 # ══════════════════════════════════════════════
 st.markdown('<p class="section-title">🚄 PART 1. 장거리 이동 탄소 계산</p>', unsafe_allow_html=True)
 st.markdown('<p class="note">수첩 p.8-9 장거리 이동 기록면과 함께 사용하세요.</p>', unsafe_allow_html=True)
 
-selected_long = st.selectbox(
-    "교통수단 선택",
-    ["KTX (장거리)", "고속버스 (장거리)", "자가용 (장거리)", "국내선 항공"]
+# 원래 코드와 동일한 전체 선택지
+selected_transport = st.selectbox(
+    "1️⃣ 이용할 교통수단 선택:",
+    df_all["교통수단"].tolist(),
+    index=1
 )
 
-if selected_long == "국내선 항공":
-    flight_routes = {
-        "서울 ↔ 제주 편도": 100,
-        "서울 ↔ 제주 왕복": 200,
-        "부산 ↔ 제주 편도": 60,
-        "부산 ↔ 제주 왕복": 120,
-    }
-    flight_route = st.selectbox("구간 선택", list(flight_routes.keys()))
-    long_score = float(flight_routes[flight_route])
-    long_kg = long_score  # 1점 = 1kg
-    st.info(f"✈ {flight_route} → **{long_score}점 = {long_kg}kgCO₂e**")
+time_hours = st.slider("2️⃣ 1회 이동 시간 (시간):", 0.5, 6.0, 2.5, step=0.5)
+direction = st.radio("3️⃣ 편도 / 왕복", ["편도", "왕복"], horizontal=True)
+multiplier = 1 if direction == "편도" else 2
 
-else:
-    long_time = st.slider("소요시간 (시간)", 0.5, 8.0, 2.5, step=0.5)
-    direction = st.radio("편도 / 왕복", ["편도", "왕복"], horizontal=True)
-    multiplier = 1 if direction == "편도" else 2
+# 점수 계산 (1kgCO₂e = 1점, 완전 일치)
+score_per_hour = transport_score_map[selected_transport]
+long_kg = round(score_per_hour * time_hours * multiplier, 2)
+long_score = long_kg  # 점수 = kg
 
-    row = df_long[df_long["교통수단"] == selected_long].iloc[0]
-    # kg = 1시간 배출량 × 시간 × 편도/왕복
-    long_kg = round(row["1시간 배출량(kg)"] * long_time * multiplier, 1)
-    long_score = long_kg  # 1kgCO₂e = 1점, 완전 일치
+# 자가용 대비 절감
+car_kg = round(CAR_SCORE_PER_HOUR * time_hours * multiplier, 2)
+saved = round(car_kg - long_kg, 2)
 
-    car_kg = round(17.1 * long_time * multiplier, 1)
-    car_score = car_kg
-    saved = round(car_score - long_score, 1)
+# 결과 표시
+st.subheader(f"📊 '{selected_transport}' 결과")
+col1, col2, col3 = st.columns(3)
+col1.metric("탄소여권 점수", f"{long_score}점")
+col2.metric("탄소배출량", f"{long_kg}kg CO₂")
+col3.metric("가솔린 승용차 대비 절감",
+            f"{saved}점" if saved > 0 else "기준 수단")
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric("이동 점수", f"{long_score}점")
-    col2.metric("탄소배출량", f"{long_kg}kg")
-    col3.metric("자가용 대비 절감", f"{saved}점" if saved >= 0 else "—")
+st.metric("상쇄 소나무", f"약 {long_kg / 6.6:.2f} 그루")
+st.markdown("---")
 
-    # 장거리 3개 수단 비교
-    compare_df = pd.DataFrame([
-        {"교통수단": "자가용", "점수": round(17.1 * long_time * multiplier, 1), "구분": "고탄소"},
-        {"교통수단": "고속버스", "점수": round(2.5 * long_time * multiplier, 1), "구분": "저탄소"},
-        {"교통수단": "KTX", "점수": round(3.2 * long_time * multiplier, 1), "구분": "저탄소"},
-    ])
-    fig_long = px.bar(
-        compare_df, x="점수", y="교통수단", orientation="h",
-        color="구분",
-        color_discrete_map={"저탄소": "#34624C", "고탄소": "#E74C3C"},
-        text="점수"
-    )
-    fig_long.update_layout(
-        showlegend=False, height=200,
-        margin=dict(l=0, r=20, t=10, b=10),
-        xaxis_title="탄소여권 점수", yaxis_title=""
-    )
-    fig_long.update_traces(textposition="outside")
-    st.plotly_chart(fig_long, use_container_width=True)
+# 연간 예산 파이 (원래 코드 스타일)
+remaining_part1 = max(0.0, ANNUAL_BUDGET_KG - long_kg)
+fig_pie = px.pie(
+    values=[long_kg, remaining_part1],
+    names=["이동 배출량", "잔여 예산"],
+    color_discrete_sequence=["#F2C4B1", "#34624C"],
+    hole=0.4
+)
+fig_pie.update_layout(height=260, margin=dict(l=0, r=0, t=20, b=0))
+st.plotly_chart(fig_pie, use_container_width=True)
 
-# ── 원래 코드: 전체 수단 비교 그래프 ──────────
+# 전체 수단 비교 (원래 코드 그대로)
 st.subheader("💡 동일 시간 이동 시 전체 수단 비교")
-
-if selected_long == "국내선 항공":
-    time_hours = 1.5
-else:
-    time_hours = long_time
-
 df_all["비교배출량(g)"] = df_all["1시간당 배출량(g)"] * time_hours
-
-fig_all = px.bar(
-    df_all.sort_values("비교배출량(g)", ascending=True),
+fig_bar = px.bar(
+    df_all.sort_values("비교배출량(g)"),
     x="비교배출량(g)", y="교통수단",
     color="카테고리",
-    color_discrete_map={"대중교통": "#34624C", "개인교통": "#E0E8A5", "항공": "#F2C4B1"},
+    color_discrete_map=COLOR_MAP,
     orientation="h"
 )
-fig_all.update_layout(
+fig_bar.update_layout(
     height=350,
     margin=dict(l=0, r=20, t=10, b=10),
-    xaxis_title="비교배출량(g)", yaxis_title="교통수단"
+    xaxis_title="비교배출량(g)", yaxis_title=""
 )
-st.plotly_chart(fig_all, use_container_width=True)
+st.plotly_chart(fig_bar, use_container_width=True)
 
-# ── 원래 코드: 감축 효과 ────────────────────
+# 감축 효과 (원래 코드 스타일)
 st.subheader("🌱 전환 시 감축 효과")
+train_score_per_hour = transport_score_map["고속열차 (KTX/SRT)"]
+train_kg = round(train_score_per_hour * time_hours * multiplier, 2)
+reduction_kg = round(long_kg - train_kg, 2)
 
-if selected_long != "국내선 항공":
-    selected_original = {
-        "KTX (장거리)": "고속열차 (KTX/SRT)",
-        "고속버스 (장거리)": "고속/시외버스",
-        "자가용 (장거리)": "가솔린 승용차"
-    }[selected_long]
-
-    selected_row = df_all[df_all["교통수단"] == selected_original].iloc[0]
-    total_emission_kg = (selected_row["1시간당 배출량(g)"] * time_hours) / 1000
-
-    train_row = df_all[df_all["교통수단"] == "고속열차 (KTX/SRT)"].iloc[0]
-    reduction_kg = total_emission_kg - (train_row["1시간당 배출량(g)"] * time_hours / 1000)
-
-    if selected_long == "KTX (장거리)":
-        st.markdown("""
-        <div style="background:#F8FCF8; border:2px solid #A3C9AE;
-             padding:20px; border-radius:18px; text-align:center">
-            🎉 지구를 살리는 최고의 선택입니다!
-        </div>""", unsafe_allow_html=True)
-    else:
-        st.success(
-            f"🎉 동일 거리를 **고속열차(KTX/SRT)**로 전환 시, "
-            f"**{reduction_kg:,.2f} kg CO₂**를 줄일 수 있습니다!\n\n"
-            f"(연간 탄소 예산의 **{(reduction_kg / ANNUAL_BUDGET_KG)*100:.2f}%** 절약)"
-        )
-
-        compare_df2 = pd.DataFrame({
-            "구분": ["현재", "전환(KTX)"],
-            "배출량(kg)": [total_emission_kg, total_emission_kg - reduction_kg]
-        })
-        st.plotly_chart(
-            px.pie(compare_df2, names="구분", values="배출량(kg)",
-                   color_discrete_sequence=["#F2C4B1", "#A3C9AE"], hole=0.4),
-            use_container_width=True
-        )
+if selected_transport == "고속열차 (KTX/SRT)" or selected_transport == "지하철 / 전기열차":
+    st.markdown("""
+    <div style="background:#F8FCF8; border:2px solid #A3C9AE;
+         padding:20px; border-radius:18px; text-align:center">
+        🎉 지구를 살리는 최고의 선택입니다!
+    </div>""", unsafe_allow_html=True)
+elif reduction_kg > 0:
+    st.success(
+        f"🎉 동일 거리를 **고속열차(KTX/SRT)**로 전환 시, "
+        f"**{reduction_kg:.2f} kg CO₂**를 줄일 수 있습니다!\n\n"
+        f"(연간 탄소 예산의 **{(reduction_kg / ANNUAL_BUDGET_KG)*100:.2f}%** 절약)"
+    )
+    compare_df = pd.DataFrame({
+        "구분": ["현재", "전환(KTX)"],
+        "배출량(kg)": [long_kg, train_kg]
+    })
+    st.plotly_chart(
+        px.pie(compare_df, names="구분", values="배출량(kg)",
+               color_discrete_sequence=["#F2C4B1", "#A3C9AE"], hole=0.4),
+        use_container_width=True
+    )
+else:
+    st.markdown("""
+    <div style="background:#F8FCF8; border:2px solid #A3C9AE;
+         padding:20px; border-radius:18px; text-align:center">
+        🎉 지구를 살리는 최고의 선택입니다!
+    </div>""", unsafe_allow_html=True)
 
 st.markdown("---")
 
@@ -220,8 +217,8 @@ st.markdown("---")
 # ══════════════════════════════════════════════
 st.markdown('<p class="section-title">🌍 PART 3. 이번 여행 총결산</p>', unsafe_allow_html=True)
 
-total_score = round(long_score + daily_total, 1)
-total_kg = total_score  # 1점 = 1kg, 완전 일치
+total_score = round(long_score + daily_total, 2)
+total_kg = total_score
 budget_pct = round((total_kg / ANNUAL_BUDGET_KG) * 100, 2)
 remaining_kg = max(0, ANNUAL_BUDGET_KG - total_kg)
 
@@ -247,7 +244,7 @@ st.markdown(f"""
     </div>
     <div style="font-size:2.4rem; font-weight:900; color:#34624C">{budget_pct}%</div>
     <div style="font-size:0.9rem; color:#555">사용 ({total_kg}kg / 5,900kg)</div>
-    <div style="font-size:0.8rem; color:#888; margin-top:6px">잔여 예산: {remaining_kg:,}kg</div>
+    <div style="font-size:0.8rem; color:#888; margin-top:6px">잔여 예산: {remaining_kg:,.1f}kg</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -255,7 +252,7 @@ fig_donut = go.Figure(go.Pie(
     values=[total_kg, remaining_kg],
     labels=["이번 여행", "잔여 예산"],
     hole=0.6,
-    marker_colors=["#52B788", "#D8F3DC"],
+    marker_colors=["#F2C4B1", "#34624C"],
     textinfo="label+percent"
 ))
 fig_donut.update_layout(
@@ -291,5 +288,5 @@ st.markdown("---")
 st.caption(
     "📱 탄소여권 프로젝트 | 제비여행 × 이매진피스\n"
     "연간 예산 기준: 녹색전환연구소 1.5°C 라이프스타일 계산기 (15lifestyle.or.kr)\n"
-    "출처: KOTEMS·환경부·한국철도공사 ESG·Cornell CHSB·Poore & Nemecek 2018·ICAO"
+    "출처: KOTEMS · 환경부 · 한국철도공사 ESG · Cornell CHSB · Poore & Nemecek 2018 · ICAO"
 )
