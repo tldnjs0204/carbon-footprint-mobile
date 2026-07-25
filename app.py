@@ -254,14 +254,7 @@ fig_donut.update_layout(
         showarrow=False
     )]
 )
-st.plotly_chart(fig_donut, use_container_width=True)
 
-st.markdown(f"""
-<div style="background:{color}15; border-left:4px solid {color};
-     padding:12px 16px; border-radius:8px; margin-top:8px; font-size:0.9rem; color:#333">
-{msg}
-</div>
-""", unsafe_allow_html=True)
 
 st.markdown("---")
 st.caption(
