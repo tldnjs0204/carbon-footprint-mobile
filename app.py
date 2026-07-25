@@ -221,12 +221,13 @@ fig_donut = go.Figure(go.Pie(
     labels=["이번 여행", "잔여 예산"],
     hole=0.6,
     marker_colors=["#F2C4B1", "#34624C"],
-    textinfo="label+percent"
+    textinfo="percent"  # ← "label+percent"에서 변경, 레이블 제거
 ))
 fig_donut.update_layout(
     height=260,
     margin=dict(l=0, r=0, t=20, b=0),
-    showlegend=False,
+    showlegend=True,  # ← 레전드로 대신 표시
+    legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
     annotations=[dict(
         text=f"{budget_pct}%",
         x=0.5, y=0.5,
@@ -234,23 +235,7 @@ fig_donut.update_layout(
         showarrow=False
     )]
 )
-st.plotly_chart(fig_donut, use_container_width=True)  # ← 누락됐던 호출 복구
-
-if budget_pct <= 2:
-    msg, color = "🌿 매우 훌륭합니다! 연간 예산의 2% 이내로 여행했습니다.", "#34624C"
-elif budget_pct <= 5:
-    msg, color = "👍 양호한 수준입니다. 이동 수단 선택이 잘 됐네요.", "#52B788"
-elif budget_pct <= 10:
-    msg, color = "⚠️ 연간 예산의 10%를 이번 여행에 사용했습니다. 장거리 이동 수단을 바꾸면 크게 줄일 수 있습니다.", "#E67E22"
-else:
-    msg, color = "🔴 연간 예산의 10% 이상을 사용했습니다. 다음 여행에서는 기차·버스 선택을 고려해보세요.", "#E74C3C"
-
-st.markdown(f"""
-<div style="background:{color}15; border-left:4px solid {color};
-     padding:12px 16px; border-radius:8px; margin-top:8px; font-size:0.9rem; color:#333">
-{msg}
-</div>
-""", unsafe_allow_html=True)
+st.plotly_chart(fig_donut, use_container_width=True)
 
 st.markdown("---")
 st.caption(
