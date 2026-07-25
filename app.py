@@ -135,17 +135,6 @@ col3.metric("가솔린 승용차 대비 절감",
 st.metric("상쇄 소나무", f"약 {long_kg / 6.6:.2f} 그루")
 st.markdown("---")
 
-# 연간 예산 파이 (원래 코드 스타일)
-remaining_part1 = max(0.0, ANNUAL_BUDGET_KG - long_kg)
-fig_pie = px.pie(
-    values=[long_kg, remaining_part1],
-    names=["이동 배출량", "잔여 예산"],
-    color_discrete_sequence=["#F2C4B1", "#34624C"],
-    hole=0.4
-)
-fig_pie.update_layout(height=260, margin=dict(l=0, r=0, t=20, b=0))
-st.plotly_chart(fig_pie, use_container_width=True)
-
 # 전체 수단 비교 (원래 코드 그대로)
 st.subheader("💡 동일 시간 이동 시 전체 수단 비교")
 df_all["비교배출량(g)"] = df_all["1시간당 배출량(g)"] * time_hours
