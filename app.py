@@ -91,7 +91,7 @@ st.markdown("---")
 # PART 1. 장거리 이동 탄소 계산
 # ══════════════════════════════════════════════
 st.markdown('<p class="section-title">🚄 PART 1. 장거리 이동 탄소 계산</p>', unsafe_allow_html=True)
-st.markdown('<p class="note">수첩 p.15-16 장거리 이동 기록면과 함께 사용하세요.</p>', unsafe_allow_html=True)
+st.markdown('<p class="note">수첩 장거리 이동 기록면과 함께 사용하세요.</p>', unsafe_allow_html=True)
 st.caption("⚠️ 일반기차·자가용의 평균 속도는 공식 출처 확인 전 잠정치입니다. 배출계수 자체는 확정값입니다.")
 st.caption("✈️ 국내선 항공은 이동 거리(300km 기준)에 따라 배출계수가 자동으로 달라집니다 — 단거리일수록 이착륙 고정 배출 비중이 커져 g/km가 높습니다.")
 
