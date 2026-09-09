@@ -190,18 +190,28 @@ if trip_distance_km < MIN_FLIGHT_DISTANCE_KM:
 else:
     df_cmp = df_all.copy()
 
+# 수단 이름이 길어서 y축 라벨이 가로로 넓게 차지하는 문제 — "(...)" 앞에서
+# 줄바꿈해 2줄로 표시하면 라벨 너비가 줄어 막대가 더 길게 보임 (모바일 개선)
+def _wrap_label(name):
+    if "(" in name:
+        idx = name.index("(")
+        return f"{name[:idx].rstrip()}<br>{name[idx:]}"
+    return name
+
+df_cmp["표시명"] = df_cmp["교통수단"].apply(_wrap_label)
+
 # 배출량 큰 것부터 위에서 아래로 나오도록 순서를 직접 지정
 # (color로 묶으면 정렬한 데이터프레임 순서가 그대로 안 먹히는 경우가 있어
 #  category_orders로 명시적으로 y축 순서를 고정)
-order_desc = df_cmp.sort_values("비교배출량(g)", ascending=False)["교통수단"].tolist()
+order_desc = df_cmp.sort_values("비교배출량(g)", ascending=False)["표시명"].tolist()
 
 fig_bar = px.bar(
     df_cmp,
-    x="비교배출량(g)", y="교통수단",
+    x="비교배출량(g)", y="표시명",
     color="카테고리",
     color_discrete_map=COLOR_MAP,
     orientation="h",
-    category_orders={"교통수단": order_desc}
+    category_orders={"표시명": order_desc}
 )
 fig_bar.update_layout(
     height=440,
