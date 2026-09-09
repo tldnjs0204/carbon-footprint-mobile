@@ -220,7 +220,14 @@ fig_bar.update_layout(
     legend_title_text="",
     legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5)
 )
-st.plotly_chart(fig_bar, use_container_width=True)
+# 모바일에서 손가락으로 그래프를 만지면 확대·이동(핀치줌/드래그줌)이 되던 문제 —
+# 축을 고정(fixedrange)하고 모드바·스크롤줌을 꺼서 순수 정보 표시용으로만 쓰게 함
+fig_bar.update_xaxes(fixedrange=True)
+fig_bar.update_yaxes(fixedrange=True)
+st.plotly_chart(
+    fig_bar, use_container_width=True,
+    config={"displayModeBar": False, "scrollZoom": False, "doubleClick": False}
+)
 
 # 감축 효과 — 같은 거리 기준으로 KTX 전환 시 절감량 계산
 st.subheader("🌱 전환 시 감축 효과")
@@ -249,7 +256,8 @@ elif reduction_kg > 0:
     st.plotly_chart(
         px.pie(compare_df, names="구분", values="배출량(kg)",
                color_discrete_sequence=["#F2C4B1", "#A3C9AE"], hole=0.4),
-        use_container_width=True
+        use_container_width=True,
+        config={"displayModeBar": False, "scrollZoom": False, "doubleClick": False}
     )
 else:
     # 고속버스처럼 KTX와 비슷한 수준
@@ -330,7 +338,10 @@ fig_donut.update_layout(
         showarrow=False
     )]
 )
-st.plotly_chart(fig_donut, use_container_width=True)
+st.plotly_chart(
+    fig_donut, use_container_width=True,
+    config={"displayModeBar": False, "scrollZoom": False, "doubleClick": False}
+)
 
 with st.expander("📎 배출계수 출처 보기"):
     st.dataframe(
