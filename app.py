@@ -204,9 +204,11 @@ fig_bar = px.bar(
     category_orders={"교통수단": order_desc}
 )
 fig_bar.update_layout(
-    height=380,
-    margin=dict(l=0, r=20, t=10, b=10),
-    xaxis_title="비교배출량(g)", yaxis_title=""
+    height=440,
+    margin=dict(l=10, r=10, t=10, b=70),
+    xaxis_title="비교배출량(g)", yaxis_title="",
+    legend_title_text="",
+    legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5)
 )
 st.plotly_chart(fig_bar, use_container_width=True)
 
@@ -333,10 +335,5 @@ st.caption(
     "장거리 이동 배출계수 출처: 한국철도공사 2022 환경경영보고서·환경부 탄소성적표지(KTX) · "
     "ICAO ICEC(국내선 항공, 광주-제주·포항-김포·김포-부산·김포-제주 4개 노선 직접 조회) · "
     "DEFRA/DESNZ 2025(고속버스·일반기차·여객선) · "
-    "ITF, 1.5°C 라이프스타일 가이드북·녹색전환연구소(자가용)\n\n"
-    "✈️ 국내선 항공 배출계수는 300km를 기준으로 단거리(164.6g/km)·중거리(130.9g/km) 구간으로 나뉘며, "
-    "비즈니스는 국내선 좌석등급 실측 비율(약 2.0배)을 별도 적용합니다. (국제선 항공은 선택지에서 제외됨)\n\n"
-    "⛴️ 여객선(페리) 배출계수는 DEFRA/DESNZ 2025 Ferry(car passenger, 129.33g/km) 확정값이지만, "
-    "속도(19km/h)는 목포-제주 1개 노선만 역산한 잠정치라 다른 항로에는 정확히 맞지 않을 수 있습니다.\n\n"
-    "⚠️ 일반기차·자가용(장거리)·여객선의 평균 속도 가정은 공식 출처 확인 전 잠정치입니다."
+    "ITF, 1.5°C 라이프스타일 가이드북·녹색전환연구소(자가용)"
 )
