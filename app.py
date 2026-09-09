@@ -58,7 +58,8 @@ TRANSPORT = [
     ("고속/시외버스",                         27.76,  95,    "대중교통", "DEFRA/DESNZ 2025 Coach"),
     ("전기 승용차 (BEV)",                     125,    90,    "개인교통", "ITF(1.5°C 라이프스타일 가이드북 수록) 🟡 속도 잠정치"),
     ("자가용 (가솔린·디젤·하이브리드)",        161,    90,    "개인교통", "ITF(1.5°C 라이프스타일 가이드북 수록, 내연기관 승용차) 🟡 속도 잠정치"),
-    ("국내선 항공기",                         124.2,  450,   "항공",     "ICAO ICEC 직접 조회, 김포-제주"),
+    ("국내선 항공기 (이코노미)",               130.9,  450,   "항공",     "ICAO ICEC 국내 4개 노선 직접 조회 · 거리별로 다름(아래 로직 참고)"),
+    ("국내선 항공기 (비즈니스)",               261.8,  450,   "항공",     "국내선 이코노미 × 약 2.0배(ICAO ICEC 국내 노선 좌석등급 비교, 국제선 3.6배와는 별도 값)"),
     ("국제선 항공기 (이코노미)",               53.3,   800,   "항공",     "ICAO ICEC 4개 노선 평균(방콕·발리·프랑크푸르트·뉴욕) 🟡 속도 잠정치"),
     ("국제선 항공기 (비즈니스)",               191.9,  800,   "항공",     "이코노미 × 약 3.6배(ICAO ICEC 좌석등급 비교) 🟡 속도 잠정치"),
 ]
@@ -78,6 +79,12 @@ COLOR_MAP = {
     "항공":     "#F2C4B1"
 }
 
+# 실제 운항 중인 국내선 중 가장 짧은 노선은 광주-제주(약 182~186km, ICAO ICEC 실측·나무위키 교차확인).
+# 그보다 짧은 거리에서는 존재하지 않는 항공 노선이므로 보수적으로 180km를 하한선으로 둔다.
+# (2026-09-09, 시원님 확인 후 반영)
+MIN_FLIGHT_DISTANCE_KM = 180
+FLIGHT_TRANSPORTS = set(df_all.loc[df_all["카테고리"] == "항공", "교통수단"])
+
 st.title("🌍 여행 탄소발자국 대시보드")
 st.markdown("---")
 
@@ -87,6 +94,7 @@ st.markdown("---")
 st.markdown('<p class="section-title">🚄 PART 1. 장거리 이동 탄소 계산</p>', unsafe_allow_html=True)
 st.markdown('<p class="note">수첩 p.15-16 장거리 이동 기록면과 함께 사용하세요.</p>', unsafe_allow_html=True)
 st.caption("⚠️ 일반기차·국제선 항공·자가용의 평균 속도는 공식 출처 확인 전 잠정치입니다. 배출계수 자체는 확정값입니다.")
+st.caption("✈️ 국내선 항공은 이동 거리(300km 기준)에 따라 배출계수가 자동으로 달라집니다 — 단거리일수록 이착륙 고정 배출 비중이 커져 g/km가 높습니다.")
 
 selected_transport = st.selectbox(
     "1️⃣ 이용할 교통수단 선택:",
@@ -101,6 +109,37 @@ multiplier = 1 if direction == "편도" else 2
 selected_speed = df_all.loc[df_all["교통수단"] == selected_transport, "평균시속(km/h)"].iloc[0]
 # 이번 이동 거리(사용자가 고른 수단·시간 기준) — 아래 "전체 수단 비교"를 같은 거리로 비교하는 데 사용
 trip_distance_km = round(selected_speed * time_hours * multiplier, 1)
+
+# ══════════════════════════════════════════════
+# 국내선 항공 — 거리별 배출계수 재적용 (2026-09-09, ICAO ICEC 국내 4개 노선 직접 조회)
+#   광주(KWJ)-제주(CJU) 182km 181.3g/km, 포항(KPO)-김포(GMP) 291km 147.8g/km
+#     → 평균 164.6g/km (<300km 구간)
+#   김포(GMP)-부산(PUS) 327km 137.6g/km, 김포(GMP)-제주(CJU) 451km 124.2g/km
+#     → 평균 130.9g/km (300~500km 구간)
+#   비즈니스는 3개 노선 좌석등급 비율 평균 약 2.0배 (국제선 3.6배와는 다른 국내 전용 값)
+# 짧은 구간일수록 이착륙(LTO) 고정 배출이 차지하는 비중이 커져 g/km가 높아짐 — 실측 기반.
+# ══════════════════════════════════════════════
+DOMESTIC_FLIGHT_ECONOMY_SHORT = 164.6  # <300km
+DOMESTIC_FLIGHT_ECONOMY_LONG = 130.9   # 300~500km
+DOMESTIC_BUSINESS_RATIO = 2.0
+
+domestic_eco_g_km = DOMESTIC_FLIGHT_ECONOMY_SHORT if trip_distance_km < 300 else DOMESTIC_FLIGHT_ECONOMY_LONG
+domestic_biz_g_km = round(domestic_eco_g_km * DOMESTIC_BUSINESS_RATIO, 1)
+
+df_all.loc[df_all["교통수단"] == "국내선 항공기 (이코노미)", "1km당 CO2 배출량(g)"] = domestic_eco_g_km
+df_all.loc[df_all["교통수단"] == "국내선 항공기 (비즈니스)", "1km당 CO2 배출량(g)"] = domestic_biz_g_km
+df_all["1시간당 배출량(g)"] = df_all["평균시속(km/h)"] * df_all["1km당 CO2 배출량(g)"]
+transport_score_map = dict(zip(df_all["교통수단"], df_all["1시간당 배출량(g)"] / 1000))
+
+# 선택한 수단이 항공인데, 계산된 거리가 실제 존재하는 최단 국내선 노선보다도 짧으면
+# 존재하지 않는 시나리오이므로 계산을 막고 안내만 표시한다.
+if selected_transport in FLIGHT_TRANSPORTS and trip_distance_km < MIN_FLIGHT_DISTANCE_KM:
+    st.error(
+        f"⚠️ 이 조건(약 {trip_distance_km:g}km)으로는 실제 운항하는 항공 노선이 없습니다. "
+        f"국내선 최단 노선인 광주-제주도 약 182~186km입니다. "
+        f"이동 시간을 늘리거나 다른 교통수단을 선택해주세요."
+    )
+    st.stop()
 
 score_per_hour = transport_score_map[selected_transport]
 long_kg = round(score_per_hour * time_hours * multiplier, 2)
@@ -120,13 +159,24 @@ st.markdown("---")
 st.subheader(f"💡 이번 이동 거리(약 {trip_distance_km:g}km)를 다른 수단으로 갔다면?")
 df_all["비교배출량(g)"] = df_all["1km당 CO2 배출량(g)"] * trip_distance_km
 
+# 이 거리보다 짧은 국내선·국제선 항공 노선은 실제로 존재하지 않으므로,
+# 비교그래프에서도 항공 항목 전체를 제외한다 (2026-09-09 반영).
+if trip_distance_km < MIN_FLIGHT_DISTANCE_KM:
+    df_cmp = df_all[df_all["카테고리"] != "항공"].copy()
+    st.caption(
+        f"✈️ 이 거리(약 {trip_distance_km:g}km)보다 짧은 항공 노선은 실제로 없어 "
+        f"비교그래프에서 항공 수단을 제외했습니다."
+    )
+else:
+    df_cmp = df_all.copy()
+
 # 배출량 큰 것부터 위에서 아래로 나오도록 순서를 직접 지정
 # (color로 묶으면 정렬한 데이터프레임 순서가 그대로 안 먹히는 경우가 있어
 #  category_orders로 명시적으로 y축 순서를 고정)
-order_desc = df_all.sort_values("비교배출량(g)", ascending=False)["교통수단"].tolist()
+order_desc = df_cmp.sort_values("비교배출량(g)", ascending=False)["교통수단"].tolist()
 
 fig_bar = px.bar(
-    df_all,
+    df_cmp,
     x="비교배출량(g)", y="교통수단",
     color="카테고리",
     color_discrete_map=COLOR_MAP,
@@ -261,7 +311,10 @@ st.caption(
     "📱 탄소여권 프로젝트 | 제비여행 × 이매진피스\n\n"
     "연간 예산 기준: 녹색전환연구소 1.5°C 라이프스타일 계산기 (15lifestyle.or.kr)\n\n"
     "장거리 이동 배출계수 출처: 한국철도공사 2022 환경경영보고서·환경부 탄소성적표지(KTX) · "
-    "ICAO ICEC(항공) · DEFRA/DESNZ 2025(고속버스·일반기차) · "
+    "ICAO ICEC(항공, 국내선은 광주-제주·포항-김포·김포-부산·김포-제주 4개 노선 직접 조회) · "
+    "DEFRA/DESNZ 2025(고속버스·일반기차) · "
     "ITF, 1.5°C 라이프스타일 가이드북·녹색전환연구소(도시내 대중교통·자가용)\n\n"
+    "✈️ 국내선 항공 배출계수는 300km를 기준으로 단거리(164.6g/km)·중거리(130.9g/km) 구간으로 나뉘며, "
+    "비즈니스는 국내선 좌석등급 실측 비율(약 2.0배)을 별도 적용합니다(국제선 3.6배와 다른 값).\n\n"
     "⚠️ 일반기차·국제선 항공·자가용(장거리)의 평균 속도 가정은 공식 출처 확인 전 잠정치입니다."
 )
